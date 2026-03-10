@@ -155,6 +155,22 @@
                             </select>
                         </div>
 
+                        <!-- Search Users -->
+                        <div class="mb-3">
+                            <label for="edit_user_search" class="form-label">Rechercher un utilisateur</label>
+                            <input type="text" class="form-control" id="edit_user_search" placeholder="Tapez un nom...">
+                            <div class="mt-2" id="edit_search_results" style="max-height: 120px; overflow-y: auto; display: none;">
+                            </div>
+                        </div>
+
+                        <!-- Selected Users from Search -->
+                        <div class="mb-3">
+                            <label class="form-label">Utilisateurs sélectionnés</label>
+                            <div id="edit_selected_users_display" class="d-flex flex-wrap gap-2">
+                            </div>
+                            <input type="hidden" name="edit_selected_users_list" id="edit_selected_users_list" value="">
+                        </div>
+
                         <div class="mb-3">
                             <label for="department_id" class="form-label">Département</label>
                             <select class="form-select select2" id="department_id" name="department_id">
@@ -167,16 +183,17 @@
                             </select>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="max_participants" class="form-label">Participants max</label>
-                            <input type="number" class="form-control" id="max_participants" name="max_participants" 
-                                   value="{{ old('max_participants', $event->max_participants) }}" min="1">
+                        <!-- Department Users Checkbox List -->
+                        <div class="mb-3" id="edit_department_users_section" style="display: none;">
+                            <label class="form-label">Membres du département</label>
+                            <div class="border rounded p-2" style="max-height: 200px; overflow-y: auto;" id="edit_department_users_list">
+                            </div>
                         </div>
 
                         <div class="mb-3">
-                            <label for="budget" class="form-label">Budget (MAD)</label>
-                            <input type="number" class="form-control" id="budget" name="budget" 
-                                   value="{{ old('budget', $event->budget) }}" step="0.01" min="0">
+                            <label for="capacity" class="form-label">Participants max</label>
+                            <input type="number" class="form-control" id="capacity" name="capacity" 
+                                   value="{{ old('capacity', $event->capacity) }}" min="1">
                         </div>
                     </div>
                 </div>
@@ -196,8 +213,184 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Hidden list of all users for search -->
+                <div id="all_users_list" style="display: none;">
+                    @foreach($users as $user)
+                    <div class="edit-all-user-item" data-user-id="{{ $user->id }}" data-user-name="{{ $user->full_name }}" data-user-dept="{{ $user->department_id }}"></div>
+                    @endforeach
+                </div>
             </div>
         </div>
     </form>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let editSelectedUsers = [];
+    let editAllUsers = [];
+    
+    // Collect all users from the hidden DOM section
+    const allUserItems = document.querySelectorAll('.edit-all-user-item');
+    allUserItems.forEach(item => {
+        const name = item.dataset.userName || '';
+        editAllUsers.push({
+            id: parseInt(item.dataset.userId),
+            first_name: name.split(' ')[0] || '',
+            last_name: name.split(' ').slice(1).join(' ') || '',
+            department_id: item.dataset.userDept
+        });
+    });
+    
+    // Pre-select existing users
+    @if($event->users->count() > 0)
+    editSelectedUsers = @json($event->users->pluck('id')->toArray());
+    @endif
+
+    const editUserSearch = document.getElementById('edit_user_search');
+    const editSearchResults = document.getElementById('edit_search_results');
+    const editSelectedUsersDisplay = document.getElementById('edit_selected_users_display');
+    const editSelectedUsersList = document.getElementById('edit_selected_users_list');
+    const editDepartmentSelect = document.getElementById('department_id');
+    const editDepartmentUsersSection = document.getElementById('edit_department_users_section');
+    const editDepartmentUsersList = document.getElementById('edit_department_users_list');
+
+    // Initialize display
+    updateEditSelectedUsersDisplay();
+
+    // Check initial department
+    if (editDepartmentSelect.value) {
+        loadEditDepartmentUsers(editDepartmentSelect.value);
+    }
+
+    // User search
+    editUserSearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        if (searchTerm.length < 2) {
+            editSearchResults.style.display = 'none';
+            return;
+        }
+
+        const filteredUsers = editAllUsers.filter(u => 
+            (u.first_name + ' ' + u.last_name).toLowerCase().includes(searchTerm) &&
+            !editSelectedUsers.includes(u.id)
+        );
+
+        if (filteredUsers.length > 0) {
+            editSearchResults.style.display = 'block';
+            editSearchResults.innerHTML = filteredUsers.map(u => `
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="${u.id}" 
+                           data-name="${u.first_name} ${u.last_name}" 
+                           onchange="toggleEditUser(this)">
+                    <label class="form-check-label">${u.first_name} ${u.last_name</label>
+                </div>
+            `).join('');
+        } else {
+            editSearchResults.innerHTML = '<small class="text-muted">Aucun utilisateur trouvé</small>';
+        }
+    });
+
+    // Department selection
+    editDepartmentSelect.addEventListener('change', function() {
+        const departmentId = this.value;
+        if (departmentId) {
+            loadEditDepartmentUsers(departmentId);
+        } else {
+            editDepartmentUsersSection.style.display = 'none';
+        }
+    });
+});
+
+function loadEditDepartmentUsers(departmentId) {
+    const deptUsers = editAllUsers.filter(u => u.department_id == departmentId);
+    
+    if (deptUsers.length > 0) {
+        editDepartmentUsersSection.style.display = 'block';
+        editDepartmentUsersList.innerHTML = deptUsers.map(u => {
+            const isChecked = editSelectedUsers.includes(u.id) ? 'checked' : '';
+            return `
+                <div class="form-check">
+                    <input class="form-check-input edit-dept-user-checkbox" type="checkbox" 
+                           value="${u.id}" data-name="${u.first_name} ${u.last_name}" 
+                           ${isChecked} onchange="toggleEditDeptUser(this)">
+                    <label class="form-check-label">${u.first_name} ${u.last_name</label>
+                </div>
+            `;
+        }).join('');
+    } else {
+        editDepartmentUsersSection.style.display = 'none';
+    }
+}
+
+function toggleEditUser(checkbox) {
+    const userId = parseInt(checkbox.value);
+    const userName = checkbox.dataset.name;
+
+    if (checkbox.checked) {
+        if (!editSelectedUsers.includes(userId)) {
+            editSelectedUsers.push(userId);
+            editSelectedUsersDisplay.innerHTML += `<span class="badge bg-primary" id="edit-user-badge-${userId}">
+                ${userName} <i class="bi bi-x-circle cursor-pointer" onclick="removeEditUser(${userId})"></i>
+            </span>`;
+        }
+    } else {
+        editSelectedUsers = editSelectedUsers.filter(id => id !== userId);
+        const badge = document.getElementById(`edit-user-badge-${userId}`);
+        if (badge) badge.remove();
+    }
+
+    updateEditSelectedUsersInput();
+}
+
+function toggleEditDeptUser(checkbox) {
+    const userId = parseInt(checkbox.value);
+    const userName = checkbox.dataset.name;
+
+    if (checkbox.checked) {
+        if (!editSelectedUsers.includes(userId)) {
+            editSelectedUsers.push(userId);
+            editSelectedUsersDisplay.innerHTML += `<span class="badge bg-primary" id="edit-user-badge-${userId}">
+                ${userName} <i class="bi bi-x-circle cursor-pointer" onclick="removeEditUser(${userId})"></i>
+            </span>`;
+        }
+    } else {
+        editSelectedUsers = editSelectedUsers.filter(id => id !== userId);
+        const badge = document.getElementById(`edit-user-badge-${userId}`);
+        if (badge) badge.remove();
+    }
+
+    updateEditSelectedUsersInput();
+}
+
+function removeEditUser(userId) {
+    editSelectedUsers = editSelectedUsers.filter(id => id !== userId);
+    const badge = document.getElementById(`edit-user-badge-${userId}`);
+    if (badge) badge.remove();
+    
+    const checkbox = editSearchResults.querySelector(`input[value="${userId}"]`);
+    if (checkbox) checkbox.checked = false;
+    
+    const deptCheckbox = editDepartmentUsersList.querySelector(`input[value="${userId}"]`);
+    if (deptCheckbox) deptCheckbox.checked = false;
+
+    updateEditSelectedUsersInput();
+}
+
+function updateEditSelectedUsersInput() {
+    editSelectedUsersList.value = editSelectedUsers.join(',');
+}
+
+function updateEditSelectedUsersDisplay() {
+    editSelectedUsers.forEach(userId => {
+        const user = editAllUsers.find(u => u.id === userId);
+        if (user && !document.getElementById(`edit-user-badge-${userId}`)) {
+            editSelectedUsersDisplay.innerHTML += `<span class="badge bg-primary" id="edit-user-badge-${userId}">
+                ${user.first_name} ${user.last_name} <i class="bi bi-x-circle cursor-pointer" onclick="removeEditUser(${userId})"></i>
+            </span>`;
+        }
+    });
+    updateEditSelectedUsersInput();
+}
+</script>
 @endsection

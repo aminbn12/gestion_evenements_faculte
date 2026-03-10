@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Event;
 use App\Models\Department;
 use App\Models\User;
+use App\Models\Alert;
+use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -66,9 +68,10 @@ class EventController extends Controller
     public function create()
     {
         $departments = Department::where('is_active', true)->get();
-        $users = User::where('status', 'active')->get();
+        $users = User::where('status', 'active')->with('role', 'department')->get();
+        $roles = Role::all();
 
-        return view('events.create', compact('departments', 'users'));
+        return view('events.create', compact('departments', 'users', 'roles'));
     }
 
     /**
@@ -88,7 +91,7 @@ class EventController extends Controller
             'city' => 'nullable|string|max:255',
             'type' => 'required|in:conference,seminar,workshop,meeting,ceremony,other',
             'priority' => 'required|in:low,medium,high,critical',
-            'status' => 'required|in:draft,published',
+            'status' => 'required|in:draft,published,cancelled,completed',
             'capacity' => 'nullable|integer|min:1',
             'is_public' => 'boolean',
             'requires_registration' => 'boolean',
@@ -97,6 +100,14 @@ class EventController extends Controller
             'assigned_users' => 'nullable|array',
             'assigned_users.*.user_id' => 'exists:users,id',
             'assigned_users.*.role' => 'in:organizer,presenter,participant,staff,volunteer',
+            // Alert fields
+            'recipient_type' => 'nullable|in:all,role,department,users',
+            'selected_roles' => 'nullable|array',
+            'selected_roles.*' => 'exists:roles,id',
+            'alert_department_id' => 'nullable|exists:departments,id',
+            'selected_users' => 'nullable',
+            'send_email_alert' => 'boolean',
+            'selected_users_list' => 'nullable|string', // From Paramètres section
         ]);
 
         $validated['slug'] = Str::slug($validated['title']) . '-' . Str::random(6);
@@ -104,7 +115,19 @@ class EventController extends Controller
 
         $event = Event::create($validated);
 
-        // Assign users
+        // Assign users from selected_users_list (Paramètres section)
+        $selectedUsersList = $request->input('selected_users_list', '');
+        if ($selectedUsersList) {
+            $userIds = array_map('intval', explode(',', $selectedUsersList));
+            foreach ($userIds as $userId) {
+                $event->users()->attach($userId, [
+                    'role' => 'participant',
+                    'status' => 'pending',
+                ]);
+            }
+        }
+
+        // Assign users from assigned_users (if any)
         if (!empty($validated['assigned_users'])) {
             foreach ($validated['assigned_users'] as $assignment) {
                 $event->users()->attach($assignment['user_id'], [
@@ -114,8 +137,75 @@ class EventController extends Controller
             }
         }
 
+        // Create alert based on recipient type
+        $this->createEventAlert($event, $request);
+
+        // Notify admins about new event
+        $this->notifyAdmins($event);
+
+        // Create automatic reminder alerts if enabled
+        if ($event->auto_reminder_enabled && $event->reminder_days_before > 0) {
+            $this->createAutoReminders($event);
+        }
+
         return redirect()->route('events.show', $event)
             ->with('success', __('Event created successfully.'));
+    }
+
+    /**
+     * Create alert based on recipient selection.
+     */
+    protected function createEventAlert(Event $event, Request $request): void
+    {
+        $recipientType = $request->input('recipient_type', 'all');
+        $sendEmail = $request->input('send_email_alert', false);
+
+        if (!$sendEmail) {
+            return;
+        }
+
+        $customRecipients = null;
+        $departmentId = null;
+
+        switch ($recipientType) {
+            case 'role':
+                $selectedRoles = $request->input('selected_roles', []);
+                if (!empty($selectedRoles)) {
+                    $users = User::whereHas('role', function ($query) use ($selectedRoles) {
+                        $query->whereIn('id', $selectedRoles);
+                    })->get();
+                    $customRecipients = $users->pluck('id')->toArray();
+                }
+                break;
+            case 'department':
+                $departmentId = $request->input('alert_department_id');
+                break;
+            case 'users':
+                $selectedUsers = $request->input('selected_users', '');
+                if ($selectedUsers) {
+                    // Handle both array and string formats
+                    if (is_array($selectedUsers)) {
+                        $customRecipients = array_map('intval', $selectedUsers);
+                    } else {
+                        $customRecipients = array_map('intval', explode(',', $selectedUsers));
+                    }
+                }
+                break;
+        }
+
+        Alert::create([
+            'event_id' => $event->id,
+            'created_by' => Auth::id(),
+            'subject' => 'Nouvel événement: ' . $event->title,
+            'message' => 'Un nouvel événement a été créé.',
+            'send_email' => true,
+            'send_whatsapp' => false,
+            'recipient_type' => $recipientType,
+            'custom_recipients' => $customRecipients,
+            'department_id' => $departmentId,
+            'scheduled_at' => now(),
+            'status' => 'pending',
+        ]);
     }
 
     /**
@@ -134,10 +224,11 @@ class EventController extends Controller
     public function edit(Event $event)
     {
         $departments = Department::where('is_active', true)->get();
-        $users = User::where('status', 'active')->get();
+        $users = User::where('status', 'active')->with('role', 'department')->get();
+        $roles = Role::all();
         $event->load('users');
 
-        return view('events.edit', compact('event', 'departments', 'users'));
+        return view('events.edit', compact('event', 'departments', 'users', 'roles'));
     }
 
     /**
@@ -166,9 +257,26 @@ class EventController extends Controller
             'assigned_users' => 'nullable|array',
             'assigned_users.*.user_id' => 'exists:users,id',
             'assigned_users.*.role' => 'in:organizer,presenter,participant,staff,volunteer',
+            'edit_selected_users_list' => 'nullable|string',
         ]);
 
         $event->update($validated);
+
+        // Handle selected users from edit form
+        $selectedUsersList = $request->input('edit_selected_users_list', '');
+        if ($selectedUsersList) {
+            $userIds = array_map('intval', explode(',', $selectedUsersList));
+            $existingUserIds = $event->users->pluck('id')->toArray();
+            
+            foreach ($userIds as $userId) {
+                if (!in_array($userId, $existingUserIds)) {
+                    $event->users()->attach($userId, [
+                        'role' => 'participant',
+                        'status' => 'pending',
+                    ]);
+                }
+            }
+        }
 
         // Sync users
         if (!empty($validated['assigned_users'])) {
@@ -224,17 +332,34 @@ class EventController extends Controller
     public function assign(Request $request, Event $event)
     {
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'role' => 'required|in:organizer,presenter,participant,staff,volunteer',
+            'user_ids' => 'required',
+            'role' => 'required|in:organizer,presenter,participant,staff,volunteer,speaker',
         ]);
 
-        $event->users()->attach($validated['user_id'], [
-            'role' => $validated['role'],
-            'status' => 'pending',
-        ]);
+        // Handle comma-separated user IDs
+        $userIds = $validated['user_ids'];
+        if (is_string($userIds)) {
+            $userIds = array_map('intval', explode(',', $userIds));
+        }
+
+        // Filter out empty values
+        $userIds = array_filter($userIds);
+
+        // Get existing user IDs for this event
+        $existingUserIds = $event->users->pluck('id')->toArray();
+
+        foreach ($userIds as $userId) {
+            // Only attach if user is not already assigned
+            if (!in_array($userId, $existingUserIds)) {
+                $event->users()->attach($userId, [
+                    'role' => $validated['role'],
+                    'status' => 'pending',
+                ]);
+            }
+        }
 
         return redirect()->route('events.show', $event)
-            ->with('success', __('User assigned to event successfully.'));
+            ->with('success', __('User(s) assigned to event successfully.'));
     }
 
     /**
@@ -281,5 +406,80 @@ class EventController extends Controller
             'critical' => '#1a3c5e',
             default => '#6c757d',
         };
+    }
+
+    /**
+     * Notify admins when a new event is created.
+     */
+    protected function notifyAdmins(Event $event): void
+    {
+        // Get all manager users (using role_id relationship)
+        $admins = User::whereHas('role', function ($query) {
+            $query->where('slug', 'manager');
+        })->get();
+
+        if ($admins->isEmpty()) {
+            return;
+        }
+
+        // Create alert for admins
+        Alert::create([
+            'event_id' => $event->id,
+            'created_by' => Auth::id(),
+            'subject' => 'Nouvel événement créé: ' . $event->title,
+            'message' => 'Un nouvel événement "' . $event->title . '" a été créé.\n\n' .
+                        'Date: ' . $event->start_date->format('d/m/Y H:i') . '\n' .
+                        'Lieu: ' . ($event->location ?? 'Non défini') . '\n' .
+                        'Type: ' . $event->type . '\n' .
+                        'Priorité: ' . $event->priority . '\n\n' .
+                        'Créé par: ' . Auth::user()->name,
+            'send_email' => true,
+            'send_whatsapp' => false,
+            'recipient_type' => 'role',
+            'custom_recipients' => $admins->pluck('id')->toArray(),
+            'scheduled_at' => now(),
+            'status' => 'pending',
+        ]);
+    }
+
+    /**
+     * Create automatic reminder alerts for an event.
+     */
+    protected function createAutoReminders(Event $event): void
+    {
+        // Configurable reminder days: 1 month, 10 days, 1 day
+        $reminderDays = [30, 10, 1];
+        
+        // Or use the event's reminder_days_before setting
+        if ($event->reminder_days_before > 0) {
+            $reminderDays = [$event->reminder_days_before];
+        }
+
+        foreach ($reminderDays as $days) {
+            // Check if alert already exists for this reminder
+            $exists = Alert::where('event_id', $event->id)
+                ->where('reminder_days', $days)
+                ->exists();
+
+            if (!$exists) {
+                $scheduledDate = $event->start_date->subDays($days);
+
+                Alert::create([
+                    'event_id' => $event->id,
+                    'created_by' => Auth::id(),
+                    'subject' => 'Rappel: ' . $event->title . ' dans ' . $days . ' jour(s)',
+                    'message' => 'L\'événement "' . $event->title . '" commence dans ' . $days . ' jour(s).\n\n' .
+                                'Date: ' . $event->start_date->format('d/m/Y H:i') . '\n' .
+                                'Lieu: ' . ($event->location ?? 'Non défini'),
+                    'send_email' => true,
+                    'send_whatsapp' => false,
+                    'recipient_type' => 'role',
+                    'custom_recipients' => null, // Will send to all relevant users
+                    'scheduled_at' => $scheduledDate,
+                    'reminder_days' => $days,
+                    'status' => 'pending',
+                ]);
+            }
+        }
     }
 }

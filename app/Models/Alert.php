@@ -27,6 +27,8 @@ class Alert extends Model
         'sent_at',
         'status',
         'error_message',
+        'reminder_days',
+        'department_id',
     ];
 
     /**
@@ -40,6 +42,7 @@ class Alert extends Model
         'custom_recipients' => 'array',
         'scheduled_at' => 'datetime',
         'sent_at' => 'datetime',
+        'reminder_days' => 'integer',
     ];
 
     /**
@@ -56,6 +59,14 @@ class Alert extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get the department for department-based alerts.
+     */
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
     }
 
     /**
@@ -92,8 +103,47 @@ class Alert extends Model
             'organizers' => $this->event->organizers,
             'presenters' => $this->event->presenters,
             'participants' => $this->event->participants,
+            'role' => $this->getRoleRecipients(),
+            'department' => $this->getDepartmentRecipients(),
+            'users' => $this->getCustomUserRecipients(),
+            'manager' => User::whereHas('role', function ($query) {
+                $query->where('slug', 'manager');
+            })->get(),
             'custom' => User::whereIn('id', $this->custom_recipients ?? [])->get(),
             default => collect(),
         };
+    }
+
+    /**
+     * Get recipients based on role (stored in custom_recipients).
+     */
+    protected function getRoleRecipients()
+    {
+        if (empty($this->custom_recipients)) {
+            return collect();
+        }
+        return User::whereIn('id', $this->custom_recipients)->get();
+    }
+
+    /**
+     * Get recipients based on department.
+     */
+    protected function getDepartmentRecipients()
+    {
+        if (!$this->department_id) {
+            return collect();
+        }
+        return User::where('department_id', $this->department_id)->get();
+    }
+
+    /**
+     * Get custom user recipients.
+     */
+    protected function getCustomUserRecipients()
+    {
+        if (empty($this->custom_recipients)) {
+            return collect();
+        }
+        return User::whereIn('id', $this->custom_recipients)->get();
     }
 }

@@ -1,0 +1,46 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('alerts', function (Blueprint $table) {
+            // Drop the enum and recreate with more options
+            $table->dropColumn('recipient_type');
+        });
+
+        Schema::table('alerts', function (Blueprint $table) {
+            $table->enum('recipient_type', [
+                'all', 
+                'organizers', 
+                'presenters', 
+                'participants', 
+                'custom', 
+                'department',
+                'role',
+                'users'
+            ])->default('all')->after('send_whatsapp');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('alerts', function (Blueprint $table) {
+            $table->dropColumn('recipient_type');
+        });
+
+        Schema::table('alerts', function (Blueprint $table) {
+            $table->enum('recipient_type', ['all', 'organizers', 'presenters', 'participants', 'custom', 'department'])->default('all');
+        });
+    }
+};

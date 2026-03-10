@@ -168,7 +168,7 @@
 
 <!-- Assign Modal -->
 <div class="modal fade" id="assignModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Assigner des participants</h5>
@@ -177,14 +177,53 @@
             <form action="{{ route('events.assign', $event) }}" method="POST">
                 @csrf
                 <div class="modal-body">
+                    <!-- Search Users -->
                     <div class="mb-3">
-                        <label class="form-label">Utilisateurs</label>
-                        <select name="user_ids[]" class="form-select select2" multiple required>
-                            @foreach(\App\Models\User::where('status', 'active')->get() as $user)
-                            <option value="{{ $user->id }}">{{ $user->full_name }} ({{ $user->email }})</option>
+                        <label for="modal_user_search" class="form-label">Rechercher un utilisateur</label>
+                        <input type="text" class="form-control" id="modal_user_search" placeholder="Tapez un nom...">
+                        <div class="mt-2" id="modal_search_results" style="max-height: 120px; overflow-y: auto; display: none;">
+                        </div>
+                    </div>
+
+                    <!-- Selected Users -->
+                    <div class="mb-3">
+                        <label class="form-label">Utilisateurs sélectionnés</label>
+                        <div id="modal_selected_users" class="d-flex flex-wrap gap-2">
+                        </div>
+                        <input type="hidden" name="user_ids" id="modal_user_ids" value="">
+                    </div>
+
+                    <!-- Department Filter -->
+                    <div class="mb-3">
+                        <label for="modal_department_filter" class="form-label">Filtrer par département</label>
+                        <select class="form-select" id="modal_department_filter">
+                            <option value="">Tous les départements</option>
+                            @foreach(\App\Models\Department::where('is_active', true)->get() as $dept)
+                            <option value="{{ $dept->id }}">{{ $dept->name }}</option>
                             @endforeach
                         </select>
                     </div>
+
+                    <!-- All Users List with Checkboxes -->
+                    <div class="mb-3">
+                        <label class="form-label">Tous les utilisateurs</label>
+                        <div class="border rounded p-2" style="max-height: 250px; overflow-y: auto;" id="modal_users_list">
+                            @php
+                            $eventUserIds = $event->users->pluck('id')->toArray();
+                            @endphp
+                            @foreach(\App\Models\User::where('status', 'active')->with('department')->get() as $user)
+                            <div class="form-check dept-user-item" data-dept-id="{{ $user->department_id }}">
+                                <input class="form-check-input modal-user-checkbox" type="checkbox" 
+                                       value="{{ $user->id }}" 
+                                       data-name="{{ $user->full_name }}"
+                                       {{ in_array($user->id, $eventUserIds) ? 'checked' : '' }}
+                                       onchange="toggleModalUser(this)">
+                                <label class="form-check-label">{{ $user->full_name }} ({{ $user->department?->name ?? 'Sans département' }})</label>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label">Rôle</label>
                         <select name="role" class="form-select">
@@ -202,4 +241,123 @@
         </div>
     </div>
 </div>
+
+<!-- Hidden list of all users for search -->
+<div id="all_modal_users_list" style="display: none;">
+    @foreach(\App\Models\User::where('status', 'active')->with('department')->get() as $user)
+    <div class="modal-all-user-item" data-user-id="{{ $user->id }}" data-user-name="{{ $user->full_name }}" data-user-dept="{{ $user->department_id }}"></div>
+    @endforeach
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const modalUserSearch = document.getElementById('modal_user_search');
+    const modalSearchResults = document.getElementById('modal_search_results');
+    const modalSelectedUsers = document.getElementById('modal_selected_users');
+    const modalUserIds = document.getElementById('modal_user_ids');
+    const modalDepartmentFilter = document.getElementById('modal_department_filter');
+    const modalUsersList = document.getElementById('modal_users_list');
+    
+    let selectedModalUsers = [];
+    let allModalUsers = [];
+    
+    // Collect all users from the hidden DOM section
+    const allUserItems = document.querySelectorAll('.modal-all-user-item');
+    allUserItems.forEach(item => {
+        const name = item.dataset.userName || '';
+        allModalUsers.push({
+            id: parseInt(item.dataset.userId),
+            first_name: name.split(' ')[0] || '',
+            last_name: name.split(' ').slice(1).join(' ') || '',
+            department_id: item.dataset.userDept
+        });
+    });
+    
+    // Initialize selected users from existing assignments
+    const existingCheckboxes = document.querySelectorAll('.modal-user-checkbox:checked');
+    existingCheckboxes.forEach(cb => {
+        selectedModalUsers.push(parseInt(cb.value));
+    });
+    updateModalUserIds();
+
+    // Search users
+    modalUserSearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        if (searchTerm.length < 2) {
+            modalSearchResults.style.display = 'none';
+            return;
+        }
+
+        const filteredUsers = allModalUsers.filter(u => 
+            (u.first_name + ' ' + u.last_name).toLowerCase().includes(searchTerm) &&
+            !selectedModalUsers.includes(u.id)
+        );
+
+        if (filteredUsers.length > 0) {
+            modalSearchResults.style.display = 'block';
+            modalSearchResults.innerHTML = filteredUsers.map(u => `
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" value="${u.id}" 
+                           data-name="${u.first_name} ${u.last_name}" 
+                           onchange="toggleModalUser(this)">
+                    <label class="form-check-label">${u.first_name} ${u.last_name}</label>
+                </div>
+            `).join('');
+        } else {
+            modalSearchResults.innerHTML = '<small class="text-muted">Aucun utilisateur trouvé</small>';
+        }
+    });
+
+    // Filter by department
+    modalDepartmentFilter.addEventListener('change', function() {
+        const deptId = this.value;
+        const items = document.querySelectorAll('.dept-user-item');
+        items.forEach(item => {
+            if (!deptId || item.dataset.deptId == deptId) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+});
+
+function toggleModalUser(checkbox) {
+    const userId = parseInt(checkbox.value);
+    const userName = checkbox.dataset.name;
+
+    if (checkbox.checked) {
+        if (!selectedModalUsers.includes(userId)) {
+            selectedModalUsers.push(userId);
+            modalSelectedUsers.innerHTML += `<span class="badge bg-primary" id="modal-badge-${userId}">
+                ${userName} <i class="bi bi-x-circle cursor-pointer" onclick="removeModalUser(${userId})"></i>
+            </span>`;
+        }
+    } else {
+        selectedModalUsers = selectedModalUsers.filter(id => id !== userId);
+        const badge = document.getElementById(`modal-badge-${userId}`);
+        if (badge) badge.remove();
+    }
+
+    updateModalUserIds();
+}
+
+function removeModalUser(userId) {
+    selectedModalUsers = selectedModalUsers.filter(id => id !== userId);
+    const badge = document.getElementById(`modal-badge-${userId}`);
+    if (badge) badge.remove();
+    
+    const checkbox = document.querySelector(`.modal-user-checkbox[value="${userId}"]`);
+    if (checkbox) checkbox.checked = false;
+    
+    const searchCheckbox = modalSearchResults.querySelector(`input[value="${userId}"]`);
+    if (searchCheckbox) searchCheckbox.checked = false;
+
+    updateModalUserIds();
+}
+
+function updateModalUserIds() {
+    modalUserIds.value = selectedModalUsers.join(',');
+}
+</script>
 @endsection
