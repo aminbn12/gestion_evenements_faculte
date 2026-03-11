@@ -8,6 +8,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\ExamController;
 use App\Http\Controllers\LeaveController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,14 +29,25 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [LoginController::class, 'login']);
 });
 
+// root landing: guests see login, authenticated users go to dashboard
+Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+    return redirect()->route('login');
+});
+
+// alias so /index behaves like dashboard (helps users who expect a default index page)
+Route::get('/index', function () {
+    return redirect()->route('dashboard');
+});
+
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::get('/', function () {
-        return redirect()->route('dashboard');
-    });
+
 
     // Events
     Route::resource('events', EventController::class);
@@ -55,7 +67,12 @@ Route::middleware('auth')->group(function () {
     Route::middleware('App\Http\Middleware\CheckRole:manager')->group(function () {
         Route::resource('users', UserController::class);
         Route::post('/users/{user}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
+        Route::get('/users/export', [UserController::class, 'exportUsers'])->name('users.export');
+        Route::post('/users/import', [UserController::class, 'importUsers'])->name('users.import');
     });
+    
+    // User template - accessible without manager role
+    Route::get('/users/template', [UserController::class, 'downloadUserTemplate'])->name('users.template');
 
     // Roles (Manager only)
     Route::middleware('App\Http\Middleware\CheckRole:manager')->group(function () {
@@ -93,4 +110,35 @@ Route::middleware('auth')->group(function () {
     Route::post('/leaves/{leave}/approve', [LeaveController::class, 'approve'])->name('leaves.approve');
     Route::post('/leaves/{leave}/reject', [LeaveController::class, 'reject'])->name('leaves.reject');
     Route::post('/leaves/{leave}/cancel', [LeaveController::class, 'cancel'])->name('leaves.cancel');
+
+    // Exam Surveillance
+    Route::get('/exams', [ExamController::class, 'index'])->name('exams.index');
+    Route::post('/exams', [ExamController::class, 'store'])->name('exams.store');
+    Route::put('/exams/{exam}', [ExamController::class, 'update'])->name('exams.update');
+    Route::delete('/exams/{exam}', [ExamController::class, 'destroy'])->name('exams.destroy');
+    Route::get('/exams/calendar', [ExamController::class, 'calendar'])->name('exams.calendar');
+    Route::get('/exams/planning', [ExamController::class, 'planning'])->name('exams.planning');
+    Route::get('/exams/stats', [ExamController::class, 'stats'])->name('exams.stats');
+    
+    // Exam Import/Export
+    Route::get('/exams/export', [ExamController::class, 'exportExams'])->name('exams.export');
+    Route::post('/exams/import', [ExamController::class, 'importExams'])->name('exams.import');
+    Route::get('/exams/template', [ExamController::class, 'downloadExamTemplate'])->name('exams.template');
+
+    // Rooms
+    Route::post('/exams/rooms', [ExamController::class, 'storeRoom'])->name('exams.rooms.store');
+
+    // Professors
+    Route::post('/exams/professors', [ExamController::class, 'storeProfessor'])->name('exams.professors.store');
+
+    // Residents
+    Route::post('/exams/residents', [ExamController::class, 'storeResident'])->name('exams.residents.store');
+
+    // Assignments
+    Route::post('/exams/assignments', [ExamController::class, 'storeAssignment'])->name('exams.assignments.store');
+    Route::delete('/exams/assignments/{assignment}', [ExamController::class, 'destroyAssignment'])->name('exams.assignments.destroy');
+
+    // Absences
+    Route::post('/exams/absences', [ExamController::class, 'storeAbsence'])->name('exams.absences.store');
+    Route::delete('/exams/absences/{absence}', [ExamController::class, 'destroyAbsence'])->name('exams.absences.destroy');
 });

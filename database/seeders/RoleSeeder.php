@@ -111,6 +111,16 @@ class RoleSeeder extends Seeder
                     'view-team',
                 ])->pluck('id')->toArray(),
             ],
+            [
+                'name' => 'Résidanat',
+                'slug' => 'residanat',
+                'description' => 'Resident access',
+                'permissions' => Permission::whereIn('slug', [
+                    'view-events',
+                    'edit-own-profile',
+                    'view-team',
+                ])->pluck('id')->toArray(),
+            ],
         ];
 
         foreach ($roles as $roleData) {

@@ -69,6 +69,76 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Enseignant/Professeur Profile -->
+                <div class="card mb-4" id="professor-fields" style="display: none;">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0"><i class="bi bi-person-badge"></i> Profil Enseignant</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="rank" class="form-label">Grade</label>
+                                <select class="form-select" id="rank" name="rank">
+                                    <option value="Pr">Pr (Professeur)</option>
+                                    <option value="Dr">Dr (Docteur)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="responsible_promo" class="form-label">Responsable Promo</label>
+                                <select class="form-select" id="responsible_promo" name="responsible_promo">
+                                    <option value="">Sélectionner...</option>
+                                    <option value="LTLP 1">LTLP 1</option>
+                                    <option value="LTLP 2">LTLP 2</option>
+                                    <option value="LTLP 3">LTLP 3</option>
+                                    <option value="FM6MD 1">FM6MD 1</option>
+                                    <option value="FM6MD 2">FM6MD 2</option>
+                                    <option value="FM6MD 3">FM6MD 3</option>
+                                    <option value="FM6MD 4">FM6MD 4</option>
+                                    <option value="FM6MD 5">FM6MD 5</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="subject" class="form-label">Matière enseignée</label>
+                            <input type="text" class="form-control" id="subject" name="subject" 
+                                   placeholder="ex: Anatomie, Physiologie, ...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resident Profile -->
+                <div class="card mb-4" id="resident-fields" style="display: none;">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0"><i class="bi bi-people"></i> Profil Résident</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="level" class="form-label">Niveau</label>
+                                <select class="form-select" id="level" name="level">
+                                    <option value="1">A1 (1ère année)</option>
+                                    <option value="2">A2 (2ème année)</option>
+                                    <option value="3">A3 (3ème année)</option>
+                                    <option value="4">A4 (4ème année)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="specialty" class="form-label">Spécialité</label>
+                                <select class="form-select" id="specialty" name="specialty">
+                                    <option value="">Sélectionner...</option>
+                                    <option value="Pédodontie Prévention">Pédodontie Prévention</option>
+                                    <option value="Parodontologie">Parodontologie</option>
+                                    <option value="Orthopédie Dento-Faciale">Orthopédie Dento-Faciale</option>
+                                    <option value="Odontologie Chirurgicale">Odontologie Chirurgicale</option>
+                                    <option value="Prothèse Conjointe">Prothèse Conjointe</option>
+                                    <option value="Prothèse Adjointe">Prothèse Adjointe</option>
+                                    <option value="Odontologie Conservatrice">Odontologie Conservatrice</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="col-lg-4">
@@ -79,7 +149,7 @@
                     <div class="card-body">
                         <div class="mb-3">
                             <label for="role_id" class="form-label">Rôle *</label>
-                            <select class="form-select" id="role_id" name="role_id" required>
+                            <select class="form-select" id="role_id" name="role_id" required onchange="toggleProfileFields()">
                                 <option value="">Sélectionner...</option>
                                 @foreach($roles as $role)
                                 <option value="{{ $role->id }}" {{ old('role_id') == $role->id ? 'selected' : '' }}>
@@ -124,4 +194,31 @@
         </div>
     </form>
 </div>
+
+<script>
+function toggleProfileFields() {
+    const roleSelect = document.getElementById('role_id');
+    const selectedOption = roleSelect.options[roleSelect.selectedIndex];
+    const roleName = selectedOption.text.toLowerCase();
+    
+    const professorFields = document.getElementById('professor-fields');
+    const residentFields = document.getElementById('resident-fields');
+    
+    // Show/hide based on role name
+    if (roleName.includes('enseignant') || roleName.includes('professeur')) {
+        professorFields.style.display = 'block';
+    } else {
+        professorFields.style.display = 'none';
+    }
+    
+    if (roleName.includes('résidanat') || roleName.includes('resident')) {
+        residentFields.style.display = 'block';
+    } else {
+        residentFields.style.display = 'none';
+    }
+}
+
+// Run on page load to handle old values
+document.addEventListener('DOMContentLoaded', toggleProfileFields);
+</script>
 @endsection

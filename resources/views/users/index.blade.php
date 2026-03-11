@@ -9,9 +9,20 @@
             <h1 class="h3 mb-0">Utilisateurs</h1>
             <p class="text-muted mb-0">Gestion des utilisateurs de la plateforme</p>
         </div>
-        <a href="{{ route('users.create') }}" class="btn btn-primary">
-            <i class="bi bi-plus-lg me-2"></i>Nouvel utilisateur
-        </a>
+        <div class="btn-group">
+            <a href="{{ route('users.template') }}" class="btn btn-outline-success">
+                <i class="bi bi-download me-1"></i>Modèle
+            </a>
+            <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#importModal">
+                <i class="bi bi-upload me-1"></i>Importer
+            </button>
+            <a href="{{ route('users.export') }}" class="btn btn-success">
+                <i class="bi bi-download me-1"></i>Exporter
+            </a>
+            <a href="{{ route('users.create') }}" class="btn btn-primary">
+                <i class="bi bi-plus-lg me-1"></i>Nouvel utilisateur
+            </a>
+        </div>
     </div>
 
     @if(session('success'))
@@ -88,5 +99,31 @@
     </div>
 
     {{ $users->links('pagination::bootstrap-5') }}
+</div>
+
+<!-- Import Modal -->
+<div class="modal fade" id="importModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Importer des utilisateurs</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('users.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Fichier Excel</label>
+                        <input type="file" name="file" class="form-control" accept=".xlsx,.xls,.csv" required>
+                        <div class="form-text">Téléchargez d'abord le modèle pour voir les colonnes requises.</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Importer</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 @endsection
