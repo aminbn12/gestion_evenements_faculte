@@ -25,6 +25,12 @@ class DashboardController extends Controller
             return $this->managerDashboard($user);
         }
 
+        if (!$user->role) {
+            Auth::logout();
+            return redirect()->route('login')
+                ->with('error', __('Your account has no role assigned. Please contact the administrator.'));
+        }
+
         return $this->userDashboard($user);
     }
 

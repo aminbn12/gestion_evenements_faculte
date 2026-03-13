@@ -65,7 +65,7 @@ class AlertController extends Controller
             'subject' => 'required|string|max:255',
             'message' => 'required|string',
             'type' => 'required|in:email,whatsapp,both',
-            'recipients' => 'required_if:all_users,|array',
+            'recipients' => 'required_without_all:all_users,by_department|array',
             'recipients.*' => 'exists:users,id',
             'all_users' => 'nullable|boolean',
             'by_department' => 'nullable|boolean',
@@ -117,7 +117,7 @@ class AlertController extends Controller
      */
     public function send(Alert $alert)
     {
-        if ($alert->status !== 'draft') {
+        if ($alert->status !== 'pending') {
             return redirect()->route('alerts.show', $alert)
                 ->with('error', __('Only draft alerts can be sent.'));
         }

@@ -183,7 +183,7 @@ class ProfileController extends Controller
             'organization' => 'required|string|max:255',
             'location' => 'nullable|string|max:255',
             'start_date' => 'required|date',
-            'end_date' => 'nullable|date|after:start_date',
+            'end_date' => 'nullable|date|after:start_date|required_if:is_current,0',
             'is_current' => 'boolean',
             'description' => 'nullable|string',
             'type' => 'required|in:academic,professional,research,administrative',

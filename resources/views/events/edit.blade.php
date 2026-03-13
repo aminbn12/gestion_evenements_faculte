@@ -226,10 +226,13 @@
 </div>
 
 <script>
+// Global variables for edit form
+let editSelectedUsers = [];
+let editAllUsers = [];
+let editUserSearch, editSearchResults, editSelectedUsersDisplay, editSelectedUsersList;
+let editDepartmentSelect, editDepartmentUsersSection, editDepartmentUsersList;
+
 document.addEventListener('DOMContentLoaded', function() {
-    let editSelectedUsers = [];
-    let editAllUsers = [];
-    
     // Collect all users from the hidden DOM section
     const allUserItems = document.querySelectorAll('.edit-all-user-item');
     allUserItems.forEach(item => {
@@ -247,13 +250,13 @@ document.addEventListener('DOMContentLoaded', function() {
     editSelectedUsers = @json($event->users->pluck('id')->toArray());
     @endif
 
-    const editUserSearch = document.getElementById('edit_user_search');
-    const editSearchResults = document.getElementById('edit_search_results');
-    const editSelectedUsersDisplay = document.getElementById('edit_selected_users_display');
-    const editSelectedUsersList = document.getElementById('edit_selected_users_list');
-    const editDepartmentSelect = document.getElementById('department_id');
-    const editDepartmentUsersSection = document.getElementById('edit_department_users_section');
-    const editDepartmentUsersList = document.getElementById('edit_department_users_list');
+    editUserSearch = document.getElementById('edit_user_search');
+    editSearchResults = document.getElementById('edit_search_results');
+    editSelectedUsersDisplay = document.getElementById('edit_selected_users_display');
+    editSelectedUsersList = document.getElementById('edit_selected_users_list');
+    editDepartmentSelect = document.getElementById('department_id');
+    editDepartmentUsersSection = document.getElementById('edit_department_users_section');
+    editDepartmentUsersList = document.getElementById('edit_department_users_list');
 
     // Initialize display
     updateEditSelectedUsersDisplay();
@@ -283,7 +286,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <input class="form-check-input" type="checkbox" value="${u.id}" 
                            data-name="${u.first_name} ${u.last_name}" 
                            onchange="toggleEditUser(this)">
-                    <label class="form-check-label">${u.first_name} ${u.last_name</label>
+                    <label class="form-check-label">${u.first_name} ${u.last_name}</label>
                 </div>
             `).join('');
         } else {
@@ -314,7 +317,7 @@ function loadEditDepartmentUsers(departmentId) {
                     <input class="form-check-input edit-dept-user-checkbox" type="checkbox" 
                            value="${u.id}" data-name="${u.first_name} ${u.last_name}" 
                            ${isChecked} onchange="toggleEditDeptUser(this)">
-                    <label class="form-check-label">${u.first_name} ${u.last_name</label>
+                    <label class="form-check-label">${u.first_name} ${u.last_name}</label>
                 </div>
             `;
         }).join('');
@@ -323,7 +326,7 @@ function loadEditDepartmentUsers(departmentId) {
     }
 }
 
-function toggleEditUser(checkbox) {
+window.toggleEditUser = function(checkbox) {
     const userId = parseInt(checkbox.value);
     const userName = checkbox.dataset.name;
 
@@ -341,9 +344,9 @@ function toggleEditUser(checkbox) {
     }
 
     updateEditSelectedUsersInput();
-}
+};
 
-function toggleEditDeptUser(checkbox) {
+window.toggleEditDeptUser = function(checkbox) {
     const userId = parseInt(checkbox.value);
     const userName = checkbox.dataset.name;
 
@@ -361,9 +364,9 @@ function toggleEditDeptUser(checkbox) {
     }
 
     updateEditSelectedUsersInput();
-}
+};
 
-function removeEditUser(userId) {
+window.removeEditUser = function(userId) {
     editSelectedUsers = editSelectedUsers.filter(id => id !== userId);
     const badge = document.getElementById(`edit-user-badge-${userId}`);
     if (badge) badge.remove();
@@ -375,7 +378,7 @@ function removeEditUser(userId) {
     if (deptCheckbox) deptCheckbox.checked = false;
 
     updateEditSelectedUsersInput();
-}
+};
 
 function updateEditSelectedUsersInput() {
     editSelectedUsersList.value = editSelectedUsers.join(',');

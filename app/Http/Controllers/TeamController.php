@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Department;
 use App\Models\TeamGroup;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class TeamController extends Controller
 {

@@ -75,16 +75,31 @@
                 </div>
                 <div class="card-body">
                     @forelse($alert->logs as $log)
+                    @if($log->user)
                     <div class="d-flex align-items-center mb-2 pb-2 border-bottom">
-                        <img src="{{ $log->recipient->avatar_url }}" class="avatar me-2" alt="">
+                        <img src="{{ $log->user->avatar_url }}" class="avatar me-2" alt="">
                         <div class="flex-grow-1">
-                            <h6 class="mb-0">{{ $log->recipient->full_name }}</h6>
-                            <small class="text-muted">{{ $log->recipient->email }}</small>
+                            <h6 class="mb-0">{{ $log->user->full_name }}</h6>
+                            <small class="text-muted">{{ $log->user->email }}</small>
                         </div>
                         <span class="badge bg-{{ $log->status === 'sent' ? 'success' : ($log->status === 'failed' ? 'danger' : 'warning') }}">
                             {{ ucfirst($log->status) }}
                         </span>
                     </div>
+                    @else
+                    <div class="d-flex align-items-center mb-2 pb-2 border-bottom">
+                        <div class="avatar me-2 bg-secondary text-white d-flex align-items-center justify-content-center">
+                            <i class="bi bi-person-slash"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0"><em class="text-muted">Utilisateur supprimé</em></h6>
+                            <small class="text-muted">User ID: {{ $log->user_id }}</small>
+                        </div>
+                        <span class="badge bg-{{ $log->status === 'sent' ? 'success' : ($log->status === 'failed' ? 'danger' : 'warning') }}">
+                            {{ ucfirst($log->status) }}
+                        </span>
+                    </div>
+                    @endif
                     @empty
                     <p class="text-muted mb-0">Aucun log disponible</p>
                     @endforelse

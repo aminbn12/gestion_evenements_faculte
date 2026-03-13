@@ -61,12 +61,22 @@
         .main-content {
             margin-left: 250px;
             padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+        
+        .main-content.sidebar-collapsed {
+            margin-left: 70px;
         }
         
         .navbar-custom {
             background-color: white;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             margin-left: 250px;
+            transition: margin-left 0.3s ease;
+        }
+        
+        .navbar-custom.sidebar-collapsed {
+            margin-left: 70px;
         }
         
         .badge-priority-low { background-color: var(--success); }
@@ -124,6 +134,109 @@
                 margin-left: 0;
             }
         }
+        
+        /* Sidebar Toggle Button */
+        .sidebar-toggle {
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: var(--secondary);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 101;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-toggle:hover {
+            background-color: #b8943f;
+        }
+        
+        /* Collapsed Sidebar Styles */
+        .sidebar.collapsed {
+            width: 70px;
+        }
+        
+        .sidebar.collapsed .sidebar-brand {
+            padding: 1rem 0.5rem;
+        }
+        
+        .sidebar.collapsed .sidebar-brand h4,
+        .sidebar.collapsed .sidebar-brand small {
+            display: none;
+        }
+        
+        .sidebar.collapsed .nav-link {
+            padding: 12px 15px;
+            margin: 4px 8px;
+            justify-content: center;
+        }
+        
+        .sidebar.collapsed .nav-link i {
+            margin-right: 0;
+            font-size: 1.25rem;
+        }
+        
+        .sidebar.collapsed .nav-link::after {
+            display: none;
+        }
+        
+        /* Hide text nodes in nav links when collapsed - use flexbox to center */
+        .sidebar.collapsed .nav-link {
+            position: relative;
+        }
+        
+        .sidebar.collapsed .nav-link:not(:has(i)) {
+            display: none;
+        }
+        
+        .sidebar.collapsed .nav-link:has(i)::after {
+            content: attr(title);
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #333;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            white-space: nowrap;
+            font-size: 12px;
+            margin-left: 10px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .sidebar.collapsed .nav-link:has(i):hover::after {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .sidebar.collapsed + .main-content,
+        .sidebar.collapsed ~ .navbar-custom {
+            margin-left: 70px;
+        }
+        
+        .sidebar.collapsed .sidebar-toggle {
+            right: -15px;
+        }
+        
+        .sidebar.collapsed .sidebar-toggle i {
+            transform: rotate(180deg);
+        }
+        
+        .sidebar.collapsed .position-absolute {
+            display: none;
+        }
     </style>
     
     @stack('styles')
@@ -132,12 +245,15 @@
     @if(auth()->check())
     <!-- Sidebar -->
     <nav class="sidebar" id="sidebar">
-        <div class="p-4">
+        <button class="sidebar-toggle" id="sidebar-toggle-btn" title="Afficher/Masquer la sidebar">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+        <div class="p-4 sidebar-brand">
             <a href="{{ route('dashboard') }}" class="text-white text-decoration-none">
                 <h4 class="mb-1">
-                    <i class="bi bi-mortarboard-fill"></i> Faculté
+                    <i class="bi bi-mortarboard-fill"></i> Faculté UM6SS
                 </h4>
-                <small class="text-muted">Gestion Événements</small>
+                <small class="text-warning fw-bold">Gestion Événements FM6MD</small>
             </a>
         </div>
         
@@ -145,20 +261,20 @@
         
         <ul class="nav flex-column mt-3">
             <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
+                <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}" title="Dashboard">
                     <i class="bi bi-speedometer2"></i> Dashboard
                 </a>
             </li>
             
             <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('events.*') ? 'active' : '' }}" href="{{ route('events.index') }}">
+                <a class="nav-link {{ request()->routeIs('events.*') ? 'active' : '' }}" href="{{ route('events.index') }}" title="Événements">
                     <i class="bi bi-calendar-event"></i> Événements
                 </a>
             </li>
             
             @if(auth()->user()->hasPermission('send-alerts'))
             <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('alerts.*') ? 'active' : '' }}" href="{{ route('alerts.index') }}">
+                <a class="nav-link {{ request()->routeIs('alerts.*') ? 'active' : '' }}" href="{{ route('alerts.index') }}" title="Alertes">
                     <i class="bi bi-bell"></i> Alertes
                 </a>
             </li>
@@ -166,27 +282,33 @@
             
             @if(auth()->user()->hasRole('manager'))
             <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}">
+                <a class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}" href="{{ route('users.index') }}" title="Utilisateurs">
                     <i class="bi bi-people"></i> Utilisateurs
                 </a>
             </li>
             
             <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}" href="{{ route('roles.index') }}">
+                <a class="nav-link {{ request()->routeIs('roles.*') ? 'active' : '' }}" href="{{ route('roles.index') }}" title="Rôles">
                     <i class="bi bi-shield-lock"></i> Rôles
                 </a>
             </li>
             @endif
             
             <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('team.*') ? 'active' : '' }}" href="{{ route('team.index') }}">
+                <a class="nav-link {{ request()->routeIs('team.*') ? 'active' : '' }}" href="{{ route('team.index') }}" title="Équipe">
                     <i class="bi bi-diagram-3"></i> Équipe
                 </a>
             </li>
             
             <li class="nav-item">
-                <a class="nav-link {{ request()->routeIs('leaves.*') ? 'active' : '' }}" href="{{ route('leaves.index') }}">
+                <a class="nav-link {{ request()->routeIs('leaves.*') ? 'active' : '' }}" href="{{ route('leaves.index') }}" title="Congés">
                     <i class="bi bi-calendar-x"></i> Congés
+                </a>
+            </li>
+            
+            <li class="nav-item">
+                <a class="nav-link {{ request()->routeIs('exams.*') ? 'active' : '' }}" href="{{ route('exams.index') }}" title="Surveillance Examens">
+                    <i class="bi bi-clipboard-check"></i> Surveillance Examens
                 </a>
             </li>
         </ul>
@@ -271,6 +393,23 @@
         // Sidebar toggle for mobile
         document.getElementById('sidebar-toggle')?.addEventListener('click', function() {
             document.getElementById('sidebar').classList.toggle('show');
+        });
+        
+        // Sidebar toggle button (collapse/expand)
+        document.getElementById('sidebar-toggle-btn')?.addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.querySelector('.main-content');
+            const navbarCustom = document.querySelector('.navbar-custom');
+            
+            sidebar.classList.toggle('collapsed');
+            
+            // Update main content and navbar margin
+            if (mainContent) {
+                mainContent.classList.toggle('sidebar-collapsed');
+            }
+            if (navbarCustom) {
+                navbarCustom.classList.toggle('sidebar-collapsed');
+            }
         });
         
         // Initialize Select2

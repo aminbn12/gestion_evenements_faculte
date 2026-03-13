@@ -250,17 +250,13 @@
 </div>
 
 <script>
+// Global variables for modal
+let selectedModalUsers = [];
+let allModalUsers = [];
+let modalUserSearch, modalSearchResults, modalSelectedUsers, modalUserIds;
+let modalDepartmentFilter, modalUsersList;
+
 document.addEventListener('DOMContentLoaded', function() {
-    const modalUserSearch = document.getElementById('modal_user_search');
-    const modalSearchResults = document.getElementById('modal_search_results');
-    const modalSelectedUsers = document.getElementById('modal_selected_users');
-    const modalUserIds = document.getElementById('modal_user_ids');
-    const modalDepartmentFilter = document.getElementById('modal_department_filter');
-    const modalUsersList = document.getElementById('modal_users_list');
-    
-    let selectedModalUsers = [];
-    let allModalUsers = [];
-    
     // Collect all users from the hidden DOM section
     const allUserItems = document.querySelectorAll('.modal-all-user-item');
     allUserItems.forEach(item => {
@@ -278,6 +274,14 @@ document.addEventListener('DOMContentLoaded', function() {
     existingCheckboxes.forEach(cb => {
         selectedModalUsers.push(parseInt(cb.value));
     });
+
+    modalUserSearch = document.getElementById('modal_user_search');
+    modalSearchResults = document.getElementById('modal_search_results');
+    modalSelectedUsers = document.getElementById('modal_selected_users');
+    modalUserIds = document.getElementById('modal_user_ids');
+    modalDepartmentFilter = document.getElementById('modal_department_filter');
+    modalUsersList = document.getElementById('modal_users_list');
+
     updateModalUserIds();
 
     // Search users
@@ -322,7 +326,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
-function toggleModalUser(checkbox) {
+window.toggleModalUser = function(checkbox) {
     const userId = parseInt(checkbox.value);
     const userName = checkbox.dataset.name;
 
@@ -340,9 +344,9 @@ function toggleModalUser(checkbox) {
     }
 
     updateModalUserIds();
-}
+};
 
-function removeModalUser(userId) {
+window.removeModalUser = function(userId) {
     selectedModalUsers = selectedModalUsers.filter(id => id !== userId);
     const badge = document.getElementById(`modal-badge-${userId}`);
     if (badge) badge.remove();
@@ -354,7 +358,7 @@ function removeModalUser(userId) {
     if (searchCheckbox) searchCheckbox.checked = false;
 
     updateModalUserIds();
-}
+};
 
 function updateModalUserIds() {
     modalUserIds.value = selectedModalUsers.join(',');

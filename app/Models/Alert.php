@@ -122,7 +122,11 @@ class Alert extends Model
         if (empty($this->custom_recipients)) {
             return collect();
         }
-        return User::whereIn('id', $this->custom_recipients)->get();
+        
+        $roleIds = $this->custom_recipients;
+        return User::whereHas('role', function ($query) use ($roleIds) {
+            $query->whereIn('id', $roleIds);
+        })->get();
     }
 
     /**

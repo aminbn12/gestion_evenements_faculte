@@ -432,7 +432,7 @@ class EventController extends Controller
                         'Lieu: ' . ($event->location ?? 'Non défini') . '\n' .
                         'Type: ' . $event->type . '\n' .
                         'Priorité: ' . $event->priority . '\n\n' .
-                        'Créé par: ' . Auth::user()->name,
+                        'Créé par: ' . Auth::user()->full_name,
             'send_email' => true,
             'send_whatsapp' => false,
             'recipient_type' => 'role',
