@@ -10,250 +10,31 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- FullCalendar CSS -->
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-    
-    <style>
-        :root {
-            --primary: #1a3c5e;
-            --secondary: #c8a951;
-            --success: #28a745;
-            --danger: #dc3545;
-            --warning: #ffc107;
-            --light: #f8f9fa;
-        }
-        
-        body {
-            background-color: var(--light);
-        }
-        
-        .sidebar {
-            min-height: 100vh;
-            background: linear-gradient(180deg, var(--primary) 0%, #0d2137 100%);
-            width: 250px;
-            position: fixed;
-            left: 0;
-            top: 0;
-            z-index: 100;
-        }
-        
-        .sidebar .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            padding: 12px 20px;
-            border-radius: 8px;
-            margin: 4px 12px;
-            transition: all 0.3s ease;
-        }
-        
-        .sidebar .nav-link:hover,
-        .sidebar .nav-link.active {
-            background-color: var(--secondary);
-            color: white;
-        }
-        
-        .sidebar .nav-link i {
-            margin-right: 10px;
-            width: 20px;
-        }
-        
-        .main-content {
-            margin-left: 250px;
-            padding: 20px;
-            transition: margin-left 0.3s ease;
-        }
-        
-        .main-content.sidebar-collapsed {
-            margin-left: 70px;
-        }
-        
-        .navbar-custom {
-            background-color: white;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            margin-left: 250px;
-            transition: margin-left 0.3s ease;
-        }
-        
-        .navbar-custom.sidebar-collapsed {
-            margin-left: 70px;
-        }
-        
-        .badge-priority-low { background-color: var(--success); }
-        .badge-priority-medium { background-color: var(--warning); color: #212529; }
-        .badge-priority-high { background-color: var(--danger); }
-        .badge-priority-critical { 
-            background-color: var(--primary); 
-            animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.7; }
-            100% { opacity: 1; }
-        }
-        
-        .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 2px 15px rgba(0, 0, 0, 0.05);
-        }
-        
-        .stat-card {
-            transition: transform 0.3s ease;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-        
-        .avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            object-fit: cover;
-        }
-        
-        .dropdown-menu {
-            border: none;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-        }
-        
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-100%);
-                transition: transform 0.3s ease;
-            }
-            
-            .sidebar.show {
-                transform: translateX(0);
-            }
-            
-            .main-content,
-            .navbar-custom {
-                margin-left: 0;
-            }
-        }
-        
-        /* Sidebar Toggle Button */
-        .sidebar-toggle {
-            position: absolute;
-            right: -15px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background-color: var(--secondary);
-            border: none;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 101;
-            transition: all 0.3s ease;
-        }
-        
-        .sidebar-toggle:hover {
-            background-color: #b8943f;
-        }
-        
-        /* Collapsed Sidebar Styles */
-        .sidebar.collapsed {
-            width: 70px;
-        }
-        
-        .sidebar.collapsed .sidebar-brand {
-            padding: 1rem 0.5rem;
-        }
-        
-        .sidebar.collapsed .sidebar-brand h4,
-        .sidebar.collapsed .sidebar-brand small {
-            display: none;
-        }
-        
-        .sidebar.collapsed .nav-link {
-            padding: 12px 15px;
-            margin: 4px 8px;
-            justify-content: center;
-        }
-        
-        .sidebar.collapsed .nav-link i {
-            margin-right: 0;
-            font-size: 1.25rem;
-        }
-        
-        .sidebar.collapsed .nav-link::after {
-            display: none;
-        }
-        
-        /* Hide text nodes in nav links when collapsed - use flexbox to center */
-        .sidebar.collapsed .nav-link {
-            position: relative;
-        }
-        
-        .sidebar.collapsed .nav-link:not(:has(i)) {
-            display: none;
-        }
-        
-        .sidebar.collapsed .nav-link:has(i)::after {
-            content: attr(title);
-            position: absolute;
-            left: 100%;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #333;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 4px;
-            white-space: nowrap;
-            font-size: 12px;
-            margin-left: 10px;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.3s ease;
-            z-index: 1000;
-        }
-        
-        .sidebar.collapsed .nav-link:has(i):hover::after {
-            opacity: 1;
-            visibility: visible;
-        }
-        
-        .sidebar.collapsed + .main-content,
-        .sidebar.collapsed ~ .navbar-custom {
-            margin-left: 70px;
-        }
-        
-        .sidebar.collapsed .sidebar-toggle {
-            right: -15px;
-        }
-        
-        .sidebar.collapsed .sidebar-toggle i {
-            transform: rotate(180deg);
-        }
-        
-        .sidebar.collapsed .position-absolute {
-            display: none;
-        }
-    </style>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     
     @stack('styles')
 </head>
-<body>
+<body class="preload">
     @if(auth()->check())
     <!-- Sidebar -->
     <nav class="sidebar" id="sidebar">
-        <button class="sidebar-toggle" id="sidebar-toggle-btn" title="Afficher/Masquer la sidebar">
-            <i class="bi bi-chevron-left"></i>
-        </button>
-        <div class="p-4 sidebar-brand">
-            <a href="{{ route('dashboard') }}" class="text-white text-decoration-none">
-                <h4 class="mb-1">
-                    <i class="bi bi-mortarboard-fill"></i> Faculté UM6SS
-                </h4>
-                <small class="text-warning fw-bold">Gestion Événements FM6MD</small>
+        <div class="p-4 sidebar-brand text-center d-flex flex-column align-items-center">
+            <a href="{{ route('dashboard') }}" class="text-white text-decoration-none d-flex flex-column align-items-center">
+                <div class="brand-icon-wrapper bg-white bg-opacity-10 p-2 rounded-3 mb-2 transition-all">
+                    <i class="bi bi-mortarboard-fill fs-3 text-white"></i>
+                </div>
+                <div class="brand-text transition-all overflow-hidden text-nowrap">
+                    <h5 class="mb-0 fw-bold">Faculté UM6SS</h5>
+                    <small class="text-warning fw-bold" style="font-size: 11px;">Gestion Événements</small>
+                </div>
             </a>
         </div>
         
@@ -321,10 +102,14 @@
     </nav>
     
     <!-- Navbar -->
-    <nav class="navbar navbar-expand navbar-light navbar-custom">
+    <nav class="navbar navbar-expand navbar-light navbar-custom" id="navbar-custom">
         <div class="container-fluid">
-            <button class="btn btn-link d-md-none" type="button" id="sidebar-toggle">
-                <i class="bi bi-list"></i>
+            <!-- Sidebar Toggles -->
+            <button class="btn btn-link text-dark d-none d-md-block me-3 p-1" type="button" id="sidebar-toggle-btn" title="Réduire/Agrandir le menu">
+                <i class="bi bi-list fs-4"></i>
+            </button>
+            <button class="btn btn-link text-dark d-md-none p-1" type="button" id="sidebar-toggle">
+                <i class="bi bi-list fs-4"></i>
             </button>
             
             <div class="navbar-nav ms-auto">
@@ -376,9 +161,18 @@
     @endif
     
     <!-- Main Content -->
-    <main class="main-content">
+    <main class="main-content" id="main-content">
         @yield('content')
     </main>
+    
+    <!-- Sync sidebar state before paint -->
+    <script>
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            document.getElementById('sidebar')?.classList.add('collapsed');
+            document.getElementById('navbar-custom')?.classList.add('sidebar-collapsed');
+            document.getElementById('main-content')?.classList.add('sidebar-collapsed');
+        }
+    </script>
     
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -389,35 +183,7 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     
-    <script>
-        // Sidebar toggle for mobile
-        document.getElementById('sidebar-toggle')?.addEventListener('click', function() {
-            document.getElementById('sidebar').classList.toggle('show');
-        });
-        
-        // Sidebar toggle button (collapse/expand)
-        document.getElementById('sidebar-toggle-btn')?.addEventListener('click', function() {
-            const sidebar = document.getElementById('sidebar');
-            const mainContent = document.querySelector('.main-content');
-            const navbarCustom = document.querySelector('.navbar-custom');
-            
-            sidebar.classList.toggle('collapsed');
-            
-            // Update main content and navbar margin
-            if (mainContent) {
-                mainContent.classList.toggle('sidebar-collapsed');
-            }
-            if (navbarCustom) {
-                navbarCustom.classList.toggle('sidebar-collapsed');
-            }
-        });
-        
-        // Initialize Select2
-        $('.select2').select2({
-            theme: 'bootstrap-5'
-        });
-    </script>
-    
     @stack('scripts')
 </body>
 </html>
+
